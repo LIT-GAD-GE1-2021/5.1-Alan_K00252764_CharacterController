@@ -5,66 +5,34 @@ public class AdventurerController : MonoBehaviour
 {
 
     public float jumpSpeed;
-
     public float horizontalSpeed = 10;
-
     public LayerMask whatIsGround;
-
     public Transform groundcheck;
-
     private float groundRadius = 0.5f;
-
     private float headRadius = 0.3f;
-
     private bool grounded;
-
     private bool jump;
-
     bool facingRight = true;
-
     private float hAxis;
-
     private Rigidbody2D theRigidBody;
-
     private Animator theAnimator;
 
 
     void Start()
     {
-        // Set variables to a default state
         jump = false;
         grounded = false;
-
-        // Get the components we need
         theRigidBody = GetComponent<Rigidbody2D>();
         theAnimator = GetComponent<Animator>();
 
     }
 
-    // Update is called once per frame
     void Update()
     {
-        // Read the spacebar has been pressed down. Note that GetKeyDown will
-        // return when the key (spacebar in this case) is pressed down but it
-        // won't keep returning true while the key is being pressed
+  
         jump = Input.GetKeyDown(KeyCode.Space);
-
-        // Get the value of the Horizontal axis
         hAxis = Input.GetAxis("Horizontal");
-
-        // Has the Q (dash) key been pressed
-        doDash = Input.GetKeyDown(KeyCode.Q);
-
-        /*
-          * hAxis will be a value between 1 and -1 (depending on whether you are going right or left). The animation
-          * controller has a property called Speed which it uses to, for example, determine whether it should
-          * transition to the Walk state. The Animator is expecting this Speed property to be equal to the value
-          * of the horizontal axis so let's set it. However, the Animator is expecting this value to be between 0 and 1
-          * and not between -1 and 1 so lets make sure we use the absolulte value of the hAxis i.e. the value without the
-          * + or - sign ( the absolute value of -0.3 for example is 0.3). We use the Mathf.Abs() function to get the
-          * absolute value of a number.
-          */
-        theAnimator.SetFloat("Speed", Mathf.Abs(hAxis));
+        theAnimator.SetFloat("hspeed", Mathf.Abs(hAxis));
 
         // Every frame i.e. everytime Unity calls Update, call the Physics2D.Overlap function
         // which takes three parameters:
@@ -93,7 +61,7 @@ public class AdventurerController : MonoBehaviour
         // Because the Ground property on the Animator Controller is a boolean we need to use the
         // SetBool function to set it (see it in use below).
 
-        theAnimator.SetBool("Ground", grounded);
+        theAnimator.SetBool("ground", grounded);
 
         // The Animator has a vspeed parameter which should be set to the vertical (y) velocity of
         // the character. This is used by the Animator in a blend tree to blend various 'falling'
@@ -106,66 +74,6 @@ public class AdventurerController : MonoBehaviour
         theAnimator.SetFloat("vspeed", yVelocity);
 
 
-        /* Finally we have a duck animation. Using Unity's Input class, get the value of the "Fire1" button.
-         * 
-         */
-        duck = Input.GetButton("Fire1");
-
-        if (duck)
-        {
-            // Okay, the player has pressed the 'Fire1' button, now set the Anoimators' Duck property to be true.
-            theAnimator.SetBool("Duck", true);
-        }
-        else
-        {
-            /* Okay, the player is not pressing the Fire1 (aka the duck) button. We want to avoid the following situation: 
-               when the character has ducked down and walked under a platform and then the player leaves go the duck button
-               and the character stands up and bangs it's head. To avoid this we need to do the following:
-                - if the player isn't pressing the duck button
-                - the character is on the ground
-                - there is ground above the character e.g. a platfrom
-
-               then don't allow the character to stand up i.e. keep the character in the duck position (even though the
-               duck button isn't being pressed).
-            */
-
-            // Let's assume there is no platfrom over head
-            platformOverHead = false;
-
-            // We are only going to force the character into a duck if they are on the ground
-            if (grounded)
-            {
-                // See if there are any Collider2D object on the whatIsGround layer within the headRadius
-                // of the headcheck transfrom position
-                platformOverHead = Physics2D.OverlapCircle(headcheck.position, headRadius, whatIsGround);
-            }
-
-            // platformOverHead at this stage will be either true or false. True if a platform was detected
-            // overhead otherwise false. Use the variable to set the Duck parameter on the Animator i.e. set
-            // the Duck parameter to either true or false
-            theAnimator.SetBool("Duck", platformOverHead);
-        }
-
-        if (doDash == true && dashing == false && dashEnabled)
-        {
-            /* Okay, the player has pressed the dash button and the character is currently not in a dash. What
-             * I am going to do is multiply the characters normal x velocity by dashMultiplier so that it's
-             * velocity is increased. This multiplication is actually done in FixedUpdate. I need to be careful only
-             * to do the multiplication (i.e. increase the characters velocity) for the duration of the dash which 
-             * is stored in the variable dashDuration. So I am going to use a coroutine to set a variable
-             * called dashing to true and set it back to false after the time specified in dashDuration has
-             * elapsed.
-             * 
-             */
-            StartCoroutine("Dash");
-        }
-
-        /*
-         * If I am going right i.e. hAxis is greater than 0 but I am not facing right then flip me. Likewise 
-         * for going left.
-         *
-         * I'm only going to flip if I'm grounded
-         */
 
         if (grounded)
         {
@@ -199,56 +107,12 @@ public class AdventurerController : MonoBehaviour
              * between -horizontalSpeed and +horizontalSpeed
              */
 
-            if (dashing == true)
-            {
-                theRigidBody.velocity = new Vector2(horizontalSpeed * hAxis * dashMultiplier, theRigidBody.velocity.y);
-            }
-            else
-            {
-                theRigidBody.velocity = new Vector2(horizontalSpeed * hAxis, theRigidBody.velocity.y);
-            }
         }
         else if (grounded && jump)
         {
             // Set the velocity, this time we keep the horizontal velocity the same but change the vertical (y)
             // velocity to jumpSpeed
             theRigidBody.velocity = new Vector2(theRigidBody.velocity.x, jumpSpeed);
-        }
-
-
-        if (theRigidBody.velocity.y < 0)
-        {
-            /* Okay, this means I'm falling down i.e. y velocity is less than 0. Notice below that I am not
-             * setting the velocity to something new but rather I am adding to the existing velocity i.e. 
-             * I am using +=
-             * 
-             * Vector2.up is the Vector (0,1)
-             * Physics2D.gravity.y is, by default, set to -9.81
-             * fallMultiplier is set via the inspector, defaulting to 5
-             * Time.deltaTime is the number of seconds it took to complete the last frame, lets assume its  
-             * 0.016 which is 1/60th of a second
-             * 
-             * so the value we are adding to the current velocity becomes:
-             *          (0,1) * -9.81 * 5 * 0.016
-             *      =>  (0,1) * -0.7848        
-             *      =>  (0, -0.7848)
-             *      
-             * so we end up adding a slight downward (negative) velocity to the character and we do this 
-             * every frame so the character falls down faster.
-             */
-            theRigidBody.velocity += Vector2.up * Physics2D.gravity.y * fallMultiplier * Time.deltaTime;
-
-        }
-        else if ((theRigidBody.velocity.y > 0) && (!Input.GetKey(KeyCode.Space)))
-        {
-            /* Okay, this means that the character is going up (y velocity is greater than 0) and the spacebar
-             * is not being pressed i.e. a low jump.
-             * 
-             * This is similar to above except we are using lowJumpMultiplier. The overall effect is that if 
-             * you just tap the spacebar, the character will start to be pulled back down sooner rather than
-             * later.
-             */
-            theRigidBody.velocity += Vector2.up * Physics2D.gravity.y * lowJumpMultiplier * Time.deltaTime;
         }
 
     }
@@ -283,14 +147,5 @@ public class AdventurerController : MonoBehaviour
         transform.localScale = theScale;
     }
 
-    /*
-     * The coroutine Dash which sets the dashing variable to true than after the dashDuration has
-     * elapsed sets it back to false.
-     */
-    private IEnumerator Dash()
-    {
-        dashing = true;
-        yield return new WaitForSeconds(dashDuration);
-        dashing = false;
-    }
+
 }
