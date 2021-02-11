@@ -30,8 +30,11 @@ public class AdventurerController : MonoBehaviour
 
     void Update()
     {
-  
-        jump = Input.GetKeyDown(KeyCode.Space);
+        if (jump == false)
+        {
+            jump = Input.GetKeyDown(KeyCode.Space);
+        }
+
         attack = Input.GetKey(KeyCode.L);
         hAxis = Input.GetAxis("Horizontal");
         theAnimator.SetFloat("hspeed", Mathf.Abs(hAxis));
@@ -79,6 +82,7 @@ public class AdventurerController : MonoBehaviour
         {
           
             theRigidBody.velocity = new Vector2(theRigidBody.velocity.x, jumpSpeed);
+            jump = false;
         }
 
         if ((hAxis > 0) && (attack))
